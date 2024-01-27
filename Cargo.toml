@@ -1,0 +1,30 @@
+[package]
+name = "crossy-road-rs"
+version = "0.0.1"
+authors = ["Ivan <contact@mixero.dev>"]
+edition = "2021"
+description = "Crossy Road, but using Rust"
+readme = "README.md"
+homepage = "https://github.com/Mixerou/crossy-road-rs"
+repository = "https://github.com/Mixerou/crossy-road-rs"
+license = "MIT"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[dependencies]
+bevy-inspector-egui = { version = "0.22.1", default-features = false, features = ["bevy_pbr"], optional = true }
+dotenv = "0.15.0"
+env_logger = "0.11.0"
+log = "0.4.20"
+
+[dependencies.bevy]
+version = "0.12.1"
+default-features = false
+features = ["bevy_render", "bevy_winit", "multi-threaded", "tonemapping_luts"]
+
+[features]
+debug = ["bevy/dynamic_linking", "bevy-inspector-egui"]

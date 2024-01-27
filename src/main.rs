@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(feature = "debug"), windows_subsystem = "windows")]
 
 #[macro_use]
 extern crate log;

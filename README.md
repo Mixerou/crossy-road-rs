@@ -7,14 +7,15 @@
 ## Content
 
 - [Development](#development)
-  - [Dependencies compatibility](#dependencies-compatibility)
+    - [Dependencies compatibility](#dependency-compatibility)
+    - [Environment Variables](#environment-variables)
 - [License](#license)
 
 ## Development
 
 > It's highly recommended to develop in debug mode with `debug` feature
 
-### Dependency compatibility
+### Dependency Compatibility
 
 Since Bevy is in the early stages of development, there may be many breaking changes.
 Therefore, if you want to upgrade to the next version, you should check dependency compatibility.
@@ -26,6 +27,12 @@ Therefore, if you want to upgrade to the next version, you should check dependen
 |-----------------------|----------------------------------------------------|
 | [bevy-inspector-egui] | Inspector plugin for the Bevy game engine          |
 | [bevy_tweening]       | Tweening animation plugin for the Bevy game engine |
+
+### Environment Variables
+
+| Variable   | Default Value | Description                                                                                                                   |
+|------------|:-------------:|-------------------------------------------------------------------------------------------------------------------------------|
+| `RUST_LOG` |       -       | `env_logger` output controller. Module declarations take comma separated entries formatted like `path::to::module=log_level`. |
 
 ## License
 

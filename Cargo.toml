@@ -29,4 +29,4 @@ default-features = false
 features = ["bevy_pbr", "bevy_render", "bevy_winit", "multi-threaded", "tonemapping_luts"]
 
 [features]
-debug = ["bevy/dynamic_linking", "bevy-inspector-egui"]
+debug = ["bevy/dynamic_linking", "bevy-inspector-egui", "bevy_rapier3d/debug-render-3d"]

@@ -7,10 +7,10 @@ use bevy::input::Input;
 use bevy::math::Vec3;
 use bevy::pbr::{PbrBundle, StandardMaterial};
 use bevy::prelude::shape::Cube;
-use bevy::prelude::IntoSystemConfigs;
 use bevy::prelude::{
     Color, Commands, Component, KeyCode, Mesh, Query, Res, ResMut, Transform, Visibility,
 };
+use bevy::prelude::{IntoSystemConfigs, SpatialBundle};
 use bevy::time::Time;
 use bevy_rapier3d::control::{KinematicCharacterController, KinematicCharacterControllerOutput};
 use bevy_rapier3d::dynamics::RigidBody;
@@ -87,12 +87,7 @@ fn spawn(
     commands
         .spawn((
             Player::default(),
-            PbrBundle {
-                mesh: meshes.add(Cube::new(1.).into()),
-                transform: Transform::from_translation(PLAYER_SPAWN_POINT),
-                visibility: Visibility::Hidden,
-                ..Default::default()
-            },
+            SpatialBundle::from_transform(Transform::from_translation(PLAYER_SPAWN_POINT)),
             RigidBody::KinematicPositionBased,
             Collider::cuboid(0.5, 0.5, 0.5),
             KinematicCharacterController {

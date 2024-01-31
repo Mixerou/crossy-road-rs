@@ -10,6 +10,7 @@ use bevy_inspector_egui::bevy_inspector::{
     ui_for_all_assets, ui_for_resources, ui_for_world_entities,
 };
 use bevy_inspector_egui::egui::{Button, CollapsingHeader, ScrollArea, Window};
+use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use bevy_rapier3d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 
 use crate::player::Player;
@@ -21,6 +22,7 @@ impl Plugin for DevelopmentPlugin {
         app.add_plugins((
             FrameTimeDiagnosticsPlugin,
             EguiPlugin,
+            DefaultInspectorConfigPlugin,
             RapierDebugRenderPlugin::default().disabled(),
         ))
         .add_systems(Update, update_ui);

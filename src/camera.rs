@@ -22,7 +22,7 @@ impl Plugin for CameraPlugin {
 pub struct Camera;
 
 fn spawn_camera(mut commands: Commands) {
-    let mut transform = Transform::from_xyz(-1.0, 3.0, 5.0).looking_at(Vec3::ZERO, Vec3::Y);
+    let mut transform = Transform::from_xyz(-1., 3.5, 4.).looking_at(Vec3::ZERO, Vec3::Y);
     transform.rotate_y(-0.9);
     transform.translation = CAMERA_SPAWN_POINT;
 
@@ -40,7 +40,7 @@ fn spawn_camera(mut commands: Commands) {
             projection: Projection::Orthographic(OrthographicProjection {
                 near: -4.,
                 scaling_mode: ScalingMode::FixedVertical(2.0),
-                scale: 3.,
+                scale: 2.5,
                 ..Default::default()
             }),
             transform,
@@ -76,7 +76,7 @@ fn follow_player(
             end: Vec3::new(
                 player_transform.translation.x + CAMERA_SPAWN_POINT.x,
                 CAMERA_SPAWN_POINT.y,
-                CAMERA_SPAWN_POINT.z,
+                CAMERA_SPAWN_POINT.z + player_transform.translation.z / 5.,
             ),
         },
     ));

@@ -1,18 +1,21 @@
 use std::collections::VecDeque;
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
-use bevy::app::{App, Plugin, Startup, Update};
+use bevy::app::{App, Plugin, Update};
 use bevy::asset::Assets;
 use bevy::hierarchy::{BuildChildren, Children};
 use bevy::input::Input;
-use bevy::math::Vec3;
-use bevy::pbr::{PbrBundle, StandardMaterial};
-use bevy::prelude::shape::Cube;
+use bevy::math::{Quat, Vec3};
+use bevy::pbr::PbrBundle;
 use bevy::prelude::{
-    Color, Commands, Component, KeyCode, Mesh, Query, Res, ResMut, Transform, Visibility,
+    in_state, Commands, Component, KeyCode, Mesh, OnEnter, Query, Res, ResMut, Transform,
+    Visibility,
 };
 use bevy::prelude::{IntoSystemConfigs, SpatialBundle};
 use bevy::time::Time;
-use bevy_rapier3d::control::{KinematicCharacterController, KinematicCharacterControllerOutput};
+use bevy_rapier3d::control::{
+    CharacterLength, KinematicCharacterController, KinematicCharacterControllerOutput,
+};
 use bevy_rapier3d::dynamics::RigidBody;
 use bevy_rapier3d::geometry::Collider;
 use bevy_tweening::lens::{TransformPositionLens, TransformScaleLens};
@@ -20,20 +23,30 @@ use bevy_tweening::{Animator, AnimatorState, EaseFunction, Sequence, Tracks, Twe
 
 use crate::constants::{
     FLATTEN_SCALE, GAMEPLAY_MAX_Z, GAMEPLAY_MIN_Z, GLOBAL_GRAVITY, PLAYER_ANIMATION_DURATION,
-    PLAYER_JUMP_HEIGHT, PLAYER_MAX_JUMP_QUEUE, PLAYER_MOVE_BACK_KEY_CODES,
+    PLAYER_CHARACTER_SIZE, PLAYER_JUMP_HEIGHT, PLAYER_MAX_JUMP_QUEUE, PLAYER_MOVE_BACK_KEY_CODES,
     PLAYER_MOVE_FORWARD_KEY_CODES, PLAYER_MOVE_LEFT_KEY_CODES, PLAYER_MOVE_RIGHT_KEY_CODES,
     PLAYER_SPAWN_POINT,
 };
+use crate::resources::CharacterCollection;
+use crate::states::AppState;
 use crate::utils;
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, spawn).add_systems(
-            Update,
-            ((move_player, handle_move_keys, jump_player, flatten_player).chain(),),
-        );
+        app.add_systems(OnEnter(AppState::Playing), spawn)
+            .add_systems(
+                Update,
+                (
+                    move_player,
+                    handle_move_keys,
+                    init_player_move,
+                    flatten_player,
+                )
+                    .chain()
+                    .run_if(in_state(AppState::Playing)),
+            );
     }
 }
 
@@ -66,15 +79,26 @@ pub struct Player {
     is_grounded: bool,
 }
 
+#[derive(Default, Component)]
+pub struct PlayerModel {
+    pub rotation_start_at: Option<f32>,
+    pub rotation_duration: Option<f32>,
+    pub start_rotation: Option<f32>,
+    pub end_rotation: Option<f32>,
+}
+
 fn spawn(
     mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    meshes: ResMut<Assets<Mesh>>,
+    characters: Res<CharacterCollection>,
 ) {
-    let child_mesh = Cube::new(0.5).into();
+    let child_mesh = meshes
+        .get(characters.chicken.mesh.clone())
+        .expect("Failed to get character mesh");
     // Let's pretend we didn't know the size
-    let child_size = PlayerModelSize::new(utils::calculate_mesh_size(&child_mesh));
-    let child_translation = Vec3::new(0., (child_size.get().y - 1.) / 2., 0.);
+    let child_size = PlayerModelSize::new(utils::calculate_mesh_size(child_mesh));
+    let child_scale = PLAYER_CHARACTER_SIZE / child_size.get().max_element();
+    let child_translation = Vec3::new(0., -child_size.get().y / 2. * child_scale, 0.);
     let child_animator = Animator::new(Tween::new(
         EaseFunction::CubicInOut,
         PLAYER_ANIMATION_DURATION,
@@ -91,6 +115,7 @@ fn spawn(
             RigidBody::KinematicPositionBased,
             Collider::cuboid(0.5, 0.5, 0.5),
             KinematicCharacterController {
+                offset: CharacterLength::Relative(0.001),
                 slide: true,
                 snap_to_ground: None,
                 ..Default::default()
@@ -99,25 +124,42 @@ fn spawn(
         .with_children(|builder| {
             builder.spawn((
                 PbrBundle {
-                    mesh: meshes.add(child_mesh),
-                    material: materials
-                        .add(Color::rgb(100. / 255., 200. / 255., 50. / 255.).into()),
-                    transform: Transform::from_translation(child_translation),
+                    mesh: characters.chicken.mesh.clone(),
+                    material: characters.chicken.material.clone(),
+                    transform: Transform::from_translation(child_translation)
+                        .with_scale(Vec3::splat(child_scale)),
                     visibility: Visibility::Visible,
                     ..Default::default()
                 },
+                PlayerModel::default(),
                 child_size,
                 child_animator,
             ));
         });
+
+    commands.spawn((PbrBundle {
+        mesh: characters.chicken.mesh.clone_weak(),
+        material: characters.chicken.material.clone_weak(),
+        transform: Transform::from_translation(child_translation)
+            .with_scale(Vec3::splat(child_scale)),
+        visibility: Visibility::Visible,
+        ..Default::default()
+    },));
 }
 
 fn move_player(
     time: Res<Time>,
-    mut players: Query<(&mut Player, &mut KinematicCharacterController)>,
+    mut players: Query<(&mut Player, &mut KinematicCharacterController, &Children)>,
+    mut player_children: Query<(&mut Transform, &mut PlayerModel)>,
     player_controller_outputs: Query<&KinematicCharacterControllerOutput>,
 ) {
-    let Some((mut player, mut controller)) = players.iter_mut().next() else {
+    let Some((mut player, mut controller, children)) = players.iter_mut().next() else {
+        return;
+    };
+    let Some(child) = children.first() else {
+        return;
+    };
+    let Ok((mut child_transform, mut player_model)) = player_children.get_mut(*child) else {
         return;
     };
 
@@ -134,6 +176,30 @@ fn move_player(
     }
 
     controller.translation = Some(player.velocity * time.delta_seconds());
+
+    if let (
+        Some(rotation_start_at),
+        Some(rotation_end_at),
+        Some(start_rotation),
+        Some(end_rotation),
+    ) = (
+        player_model.rotation_start_at,
+        player_model.rotation_duration,
+        player_model.start_rotation,
+        player_model.end_rotation,
+    ) {
+        let aka_delta_time = (time.elapsed_seconds() - rotation_start_at) / rotation_end_at;
+
+        if aka_delta_time > 1. {
+            player_model.rotation_start_at = None;
+            player_model.rotation_duration = None;
+            player_model.start_rotation = None;
+            player_model.end_rotation = None;
+        }
+
+        let new_rotation = start_rotation * (1. - aka_delta_time) + end_rotation * aka_delta_time;
+        child_transform.rotation = Quat::from_rotation_y(new_rotation % TAU);
+    }
 }
 
 fn handle_move_keys(
@@ -166,20 +232,33 @@ fn handle_move_keys(
     }
 }
 
-fn jump_player(
+fn init_player_move(
     time: Res<Time>,
-    mut players: Query<(&mut Player, &mut KinematicCharacterController, &Transform)>,
+    mut players: Query<(
+        &mut Player,
+        &mut KinematicCharacterController,
+        &Transform,
+        &Children,
+    )>,
+    mut player_children: Query<(&Transform, &mut PlayerModel)>,
 ) {
-    let Some((mut player, mut controller, transform)) = players.iter_mut().next() else {
-        return;
-    };
-    let Some(jump_direction) = player.jump_queue.front() else {
+    let Some((mut player, mut controller, transform, children)) = players.iter_mut().next() else {
         return;
     };
 
     if !player.is_grounded {
         return;
     }
+
+    let Some(child) = children.first() else {
+        return;
+    };
+    let Ok((child_transform, mut player_model)) = player_children.get_mut(*child) else {
+        return;
+    };
+    let Some(jump_direction) = player.jump_queue.front() else {
+        return;
+    };
 
     let player_translation = transform.translation;
     let target_x = match jump_direction {
@@ -201,6 +280,66 @@ fn jump_player(
         / (f32::sqrt(-2. * PLAYER_JUMP_HEIGHT / -GLOBAL_GRAVITY)
             + f32::sqrt(2. * (displacement_y - PLAYER_JUMP_HEIGHT) / -GLOBAL_GRAVITY));
 
+    let child_rotation_y = child_transform.rotation.to_scaled_axis().y;
+
+    player_model.rotation_start_at = Some(time.elapsed_seconds());
+    player_model.rotation_duration = Some(velocity_y.y / GLOBAL_GRAVITY * 2.);
+    player_model.start_rotation = Some(child_rotation_y);
+    #[rustfmt::skip]
+    let end_rotation = match jump_direction {
+        PlayerJumpDirection::Forward => {
+            if child_rotation_y.abs() < 0.5
+                || (child_rotation_y + PI + FRAC_PI_2).abs() < 0.5
+                || (child_rotation_y + FRAC_PI_2).abs() < 0.5
+            { Some(-PI) }
+            else if (child_rotation_y - TAU).abs() < 0.5
+                || (child_rotation_y - FRAC_PI_2).abs() < 0.5
+                || (child_rotation_y - PI - FRAC_PI_2).abs() < 0.5
+            { Some(PI) }
+            else if (child_rotation_y + TAU).abs() < 0.5
+            { Some(-TAU - PI) }
+            else { None }
+        }
+        PlayerJumpDirection::Back => {
+            if (child_rotation_y.abs() - FRAC_PI_2) < 0.5
+                || (child_rotation_y + PI).abs() < 0.5
+            { Some(0.) }
+            else if (child_rotation_y - PI).abs() < 0.5
+                || (child_rotation_y - PI - FRAC_PI_2).abs() < 0.5
+            { Some(TAU) }
+            else if (child_rotation_y + PI + FRAC_PI_2).abs() < 0.5
+            { Some(-TAU) }
+            else { None }
+        }
+        PlayerJumpDirection::Left => {
+            if (child_rotation_y - PI).abs() < 0.5
+                || (child_rotation_y - TAU).abs() < 0.5
+            { Some(PI + FRAC_PI_2) }
+            else if (child_rotation_y + PI).abs() < 0.5
+                || (child_rotation_y - FRAC_PI_2).abs() < 0.5
+                || child_rotation_y.abs() < 0.5
+            { Some(-FRAC_PI_2) }
+            else if (child_rotation_y + PI + FRAC_PI_2).abs() < 0.5
+                || (child_rotation_y + TAU).abs() < 0.5
+            { Some(-TAU - FRAC_PI_2) }
+            else { None }
+        }
+        PlayerJumpDirection::Right => {
+            if child_rotation_y.abs() < 0.5
+                || (child_rotation_y + FRAC_PI_2).abs() < 0.5
+                || (child_rotation_y - PI).abs() < 0.5
+            { Some(FRAC_PI_2) }
+            else if (child_rotation_y + TAU).abs() < 0.5
+                || (child_rotation_y + PI).abs() < 0.5
+            { Some(-PI - FRAC_PI_2) }
+            else if (child_rotation_y - TAU).abs() < 0.5
+                || (child_rotation_y - PI - FRAC_PI_2).abs() < 0.5
+            { Some(TAU + FRAC_PI_2) }
+            else { None }
+        }
+    };
+    player_model.end_rotation = end_rotation;
+
     player.velocity = velocity_xz + velocity_y;
     player.is_grounded = false;
     controller.translation = Some(player.velocity * time.delta_seconds());
@@ -221,6 +360,7 @@ fn flatten_player(
     else {
         return;
     };
+    let child_scale = Vec3::splat(PLAYER_CHARACTER_SIZE / child_size.get().max_element());
 
     if !player.is_grounded || !player.jump_queue.is_empty() {
         child_animator.state = AnimatorState::Paused;
@@ -234,16 +374,28 @@ fn flatten_player(
         return;
     }
 
-    let (end_position_y, end_scale) =
+    let (end_position, end_scale) =
         match keyboard_input.any_pressed(utils::get_player_move_key_codes()) {
-            true => (
-                (child_size.get().y * FLATTEN_SCALE.y - 1.) / 2.,
-                FLATTEN_SCALE,
+            true => {
+                let end_scale = child_scale * FLATTEN_SCALE;
+                let initial_position_y = -child_size.get().y / 2. * child_scale.y;
+                let flatten_position_y = -child_size.get().y * end_scale.y / 2.;
+                (
+                    Vec3::new(
+                        0.,
+                        initial_position_y + (initial_position_y - flatten_position_y),
+                        0.,
+                    ),
+                    end_scale,
+                )
+            }
+            false => (
+                Vec3::new(0., -child_size.get().y / 2. * child_scale.y, 0.),
+                child_scale,
             ),
-            false => ((child_size.get().y - 1.) / 2., Vec3::ONE),
         };
 
-    if child_transform.translation.y == end_position_y && child_transform.scale == end_scale {
+    if child_transform.scale == end_scale && child_transform.translation == end_position {
         return;
     }
 
@@ -253,11 +405,7 @@ fn flatten_player(
             PLAYER_ANIMATION_DURATION,
             TransformPositionLens {
                 start: child_transform.translation,
-                end: Vec3::new(
-                    child_transform.translation.x,
-                    end_position_y,
-                    child_transform.translation.z,
-                ),
+                end: end_position,
             },
         ),
         Tween::new(

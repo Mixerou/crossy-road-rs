@@ -16,6 +16,7 @@ pub const FLATTEN_SCALE: Vec3 = Vec3::new(1.125, 0.875, 1.125);
 
 // Player
 pub const PLAYER_SPAWN_POINT: Vec3 = Vec3::new(0., 1.01, 0.);
+pub const PLAYER_CHARACTER_SIZE: f32 = 0.5;
 pub const PLAYER_ANIMATION_DURATION: Duration = Duration::from_millis(200);
 pub const PLAYER_MAX_JUMP_QUEUE: usize = 2;
 pub const PLAYER_JUMP_HEIGHT: f32 = 0.25;

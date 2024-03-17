@@ -4,7 +4,7 @@
 extern crate log;
 
 use bevy::app::{App, PluginGroup};
-use bevy::prelude::{ClearColor, Color};
+use bevy::prelude::{ClearColor, Color, ImagePlugin};
 use bevy::window::{PresentMode, Window, WindowPlugin};
 use bevy::DefaultPlugins;
 use bevy_rapier3d::plugin::{NoUserData, RapierPhysicsPlugin};
@@ -15,6 +15,8 @@ use crate::camera::CameraPlugin;
 #[cfg(feature = "debug")]
 use crate::dev::DevelopmentPlugin;
 use crate::player::PlayerPlugin;
+use crate::resources::ResourcePlugin;
+use crate::states::AppState;
 use crate::world::WorldPlugin;
 
 mod camera;
@@ -22,6 +24,8 @@ mod constants;
 #[cfg(feature = "debug")]
 mod dev;
 mod player;
+mod resources;
+mod states;
 mod utils;
 mod world;
 
@@ -47,13 +51,20 @@ fn main() {
 
     // Default and other dependencies
     app.insert_resource(ClearColor(Color::AZURE)).add_plugins((
-        DefaultPlugins.set(window_plugin),
+        DefaultPlugins
+            .set(window_plugin)
+            .set(ImagePlugin::default_nearest()),
         RapierPhysicsPlugin::<NoUserData>::default(),
         TweeningPlugin,
     ));
 
     // Current crate
-    app.add_plugins((CameraPlugin, PlayerPlugin, WorldPlugin));
+    app.add_state::<AppState>().add_plugins((
+        CameraPlugin,
+        PlayerPlugin,
+        ResourcePlugin,
+        WorldPlugin,
+    ));
 
     // For development
     #[cfg(feature = "debug")]

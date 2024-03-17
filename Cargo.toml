@@ -26,7 +26,7 @@ log = "0.4.20"
 [dependencies.bevy]
 version = "0.12.1"
 default-features = false
-features = ["bevy_pbr", "bevy_render", "bevy_winit", "multi-threaded", "tonemapping_luts"]
+features = ["bevy_gltf", "bevy_pbr", "bevy_render", "bevy_winit", "multi-threaded", "png", "tonemapping_luts"]
 
 [features]
 debug = ["bevy/dynamic_linking", "bevy-inspector-egui", "bevy_rapier3d/debug-render-3d"]

@@ -21,11 +21,13 @@ Since Bevy is in the early stages of development, there may be many breaking cha
 Therefore, if you want to upgrade to the next version, you should check dependency compatibility.
 
 [bevy-inspector-egui]: https://github.com/jakobhellermann/bevy-inspector-egui?tab=readme-ov-file#bevy-support-table
+[bevy_rapier3d]: https://github.com/dimforge/bevy_rapier/blob/master/bevy_rapier3d/Cargo.toml
 [bevy_tweening]: https://github.com/djeedai/bevy_tweening?tab=readme-ov-file#compatible-bevy-versions
 
 | Dependency            | Description                                        |
 |-----------------------|----------------------------------------------------|
 | [bevy-inspector-egui] | Inspector plugin for the Bevy game engine          |
+| [bevy_rapier3d]       | 2D and 3D physics engines focused on performance   |
 | [bevy_tweening]       | Tweening animation plugin for the Bevy game engine |
 
 ### Environment Variables

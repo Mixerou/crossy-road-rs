@@ -2,11 +2,10 @@ use bevy::app::{App, Plugin, Startup};
 use bevy::asset::Assets;
 use bevy::math::Vec3;
 use bevy::pbr::{
-    AmbientLight, CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle, PbrBundle,
+    CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle, PbrBundle,
     StandardMaterial,
 };
-use bevy::prelude::shape::Cube;
-use bevy::prelude::{Color, Commands, Mesh, ResMut, Transform};
+use bevy::prelude::{Color, Commands, Cuboid, Mesh, ResMut, Transform};
 use bevy_rapier3d::dynamics::RigidBody;
 use bevy_rapier3d::geometry::Collider;
 
@@ -25,14 +24,9 @@ fn init_world(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
-    commands.insert_resource(AmbientLight {
-        color: Color::rgb(219. / 255., 220. / 255., 1.),
-        brightness: 1.,
-    });
-
     commands.spawn(DirectionalLightBundle {
         directional_light: DirectionalLight {
-            illuminance: 35_000.,
+            illuminance: 7_000.,
             shadows_enabled: true,
             ..Default::default()
         },
@@ -48,7 +42,18 @@ fn init_world(
         ..Default::default()
     });
 
-    let cube = meshes.add(Cube::new(1.0).into());
+    commands.spawn(DirectionalLightBundle {
+        directional_light: DirectionalLight {
+            color: Color::rgb(219. / 255., 220. / 255., 1.),
+            illuminance: 3_000.,
+            ..Default::default()
+        },
+        transform: Transform::from_translation(Vec3::new(-3., 2., 1.5))
+            .looking_at(Vec3::ZERO, Vec3::Y),
+        ..Default::default()
+    });
+
+    let cube = meshes.add(Cuboid::from_size(Vec3::splat(1.)));
 
     let light_green: StandardMaterial = Color::rgb(174. / 255., 224. / 255., 102. / 255.).into();
     let dark_green: StandardMaterial = Color::rgb(167. / 255., 217. / 255., 94. / 255.).into();

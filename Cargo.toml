@@ -16,15 +16,15 @@ opt-level = 1
 opt-level = 3
 
 [dependencies]
-bevy-inspector-egui = { version = "0.22.1", default-features = false, features = ["bevy_pbr"], optional = true }
-bevy_rapier3d = { version = "0.24.0", default-features = false, features = ["dim3", "parallel", "simd-stable"] }
-bevy_tweening = { version = "0.9.0", default-features = false }
+bevy-inspector-egui = { version = "0.23.4", default-features = false, features = ["bevy_pbr"], optional = true }
+bevy_rapier3d = { version = "0.25.0", default-features = false, features = ["dim3", "parallel", "simd-stable"] }
+bevy_tweening = { version = "0.10.0", default-features = false }
 dotenv = "0.15.0"
 env_logger = "0.11.0"
 log = "0.4.20"
 
 [dependencies.bevy]
-version = "0.12.1"
+version = "0.13.1"
 default-features = false
 features = ["bevy_gltf", "bevy_pbr", "bevy_render", "bevy_winit", "multi-threaded", "png", "tonemapping_luts"]
 

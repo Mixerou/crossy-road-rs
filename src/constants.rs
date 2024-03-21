@@ -20,10 +20,11 @@ pub const PLAYER_CHARACTER_SIZE: f32 = 0.5;
 pub const PLAYER_ANIMATION_DURATION: Duration = Duration::from_millis(200);
 pub const PLAYER_MAX_JUMP_QUEUE: usize = 2;
 pub const PLAYER_JUMP_HEIGHT: f32 = 0.25;
-pub const PLAYER_MOVE_FORWARD_KEY_CODES: [KeyCode; 3] = [KeyCode::W, KeyCode::Up, KeyCode::Space];
-pub const PLAYER_MOVE_BACK_KEY_CODES: [KeyCode; 2] = [KeyCode::S, KeyCode::Down];
-pub const PLAYER_MOVE_LEFT_KEY_CODES: [KeyCode; 2] = [KeyCode::A, KeyCode::Left];
-pub const PLAYER_MOVE_RIGHT_KEY_CODES: [KeyCode; 2] = [KeyCode::D, KeyCode::Right];
+pub const PLAYER_MOVE_FORWARD_KEY_CODES: [KeyCode; 3] =
+    [KeyCode::KeyW, KeyCode::ArrowUp, KeyCode::Space];
+pub const PLAYER_MOVE_BACK_KEY_CODES: [KeyCode; 2] = [KeyCode::KeyS, KeyCode::ArrowDown];
+pub const PLAYER_MOVE_LEFT_KEY_CODES: [KeyCode; 2] = [KeyCode::KeyA, KeyCode::ArrowLeft];
+pub const PLAYER_MOVE_RIGHT_KEY_CODES: [KeyCode; 2] = [KeyCode::KeyD, KeyCode::ArrowRight];
 
 // Other
 pub const GLOBAL_GRAVITY: f32 = 40.;

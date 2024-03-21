@@ -4,6 +4,7 @@
 extern crate log;
 
 use bevy::app::{App, PluginGroup};
+use bevy::log::LogPlugin;
 use bevy::prelude::{ClearColor, Color, ImagePlugin};
 use bevy::window::{PresentMode, Window, WindowPlugin};
 use bevy::DefaultPlugins;
@@ -53,13 +54,14 @@ fn main() {
     app.insert_resource(ClearColor(Color::AZURE)).add_plugins((
         DefaultPlugins
             .set(window_plugin)
-            .set(ImagePlugin::default_nearest()),
+            .set(ImagePlugin::default_nearest())
+            .disable::<LogPlugin>(),
         RapierPhysicsPlugin::<NoUserData>::default(),
         TweeningPlugin,
     ));
 
     // Current crate
-    app.add_state::<AppState>().add_plugins((
+    app.init_state::<AppState>().add_plugins((
         CameraPlugin,
         PlayerPlugin,
         ResourcePlugin,

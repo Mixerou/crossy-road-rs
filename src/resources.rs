@@ -1,7 +1,5 @@
-use std::any::TypeId;
-
 use bevy::app::{App, Plugin, Update};
-use bevy::asset::{AssetServer, Assets, Handle, LoadState, UntypedHandle};
+use bevy::asset::{AssetServer, Handle, LoadState, UntypedHandle};
 use bevy::pbr::StandardMaterial;
 use bevy::prelude::{
     in_state, run_once, Commands, IntoSystemConfigs, Mesh, NextState, Res, ResMut, Resource,
@@ -38,23 +36,12 @@ fn setup(
 fn check_assets_ready(
     mut commands: Commands,
     mut next_state: ResMut<NextState<AppState>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
     server: Res<AssetServer>,
     loading: Res<AssetLoading>,
 ) {
     for handle in &loading.handles {
         match server.load_state(handle.id()) {
-            LoadState::Loaded => {
-                if handle.type_id() == TypeId::of::<StandardMaterial>() {
-                    let Some(material) = materials.get_mut(handle.id()) else {
-                        panic!("Failed to initialise some assets");
-                    };
-
-                    if material.diffuse_transmission < 0.125 {
-                        material.diffuse_transmission = 0.125;
-                    }
-                }
-            }
+            LoadState::Loaded => {}
             LoadState::Failed => panic!("Failed to load some assets"),
             _ => return,
         }

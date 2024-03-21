@@ -82,8 +82,8 @@ fn update_ui(world: &mut World, mut context: Local<UiContext>) {
 
     if context.last_diagnostics_read_at + Duration::from_millis(100) < Instant::now() {
         let diagnostics = world.resource::<DiagnosticsStore>();
-        let fps = diagnostics.get(FrameTimeDiagnosticsPlugin::FPS);
-        let frame_time = diagnostics.get(FrameTimeDiagnosticsPlugin::FRAME_TIME);
+        let fps = diagnostics.get(&FrameTimeDiagnosticsPlugin::FPS);
+        let frame_time = diagnostics.get(&FrameTimeDiagnosticsPlugin::FRAME_TIME);
 
         context.fps = parse_diagnostic(fps, false, 0, "".into());
         context.frame_time = parse_diagnostic(frame_time, false, 1, "ms".into());

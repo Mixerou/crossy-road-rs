@@ -4,7 +4,7 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 use bevy::app::{App, Plugin, Update};
 use bevy::asset::Assets;
 use bevy::hierarchy::{BuildChildren, Children};
-use bevy::input::Input;
+use bevy::input::ButtonInput;
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::PbrBundle;
 use bevy::prelude::{
@@ -203,7 +203,7 @@ fn move_player(
 }
 
 fn handle_move_keys(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut players: Query<(&mut Player, &Transform)>,
 ) {
     let Some((mut player, player_transform)) = players.iter_mut().next() else {
@@ -346,7 +346,7 @@ fn init_player_move(
 }
 
 fn flatten_player(
-    keyboard_input: Res<Input<KeyCode>>,
+    keyboard_input: Res<ButtonInput<KeyCode>>,
     mut players: Query<(&Player, &Children)>,
     mut player_children: Query<(&Transform, &PlayerModelSize, &mut Animator<Transform>)>,
 ) {

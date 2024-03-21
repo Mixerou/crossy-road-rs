@@ -1,6 +1,6 @@
 use bevy::app::{App, Plugin, Startup};
 use bevy::asset::Assets;
-use bevy::math::Quat;
+use bevy::math::Vec3;
 use bevy::pbr::{
     AmbientLight, CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle, PbrBundle,
     StandardMaterial,
@@ -26,8 +26,8 @@ fn init_world(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.25,
+        color: Color::rgb(219. / 255., 220. / 255., 1.),
+        brightness: 1.,
     });
 
     commands.spawn(DirectionalLightBundle {
@@ -36,12 +36,10 @@ fn init_world(
             shadows_enabled: true,
             ..Default::default()
         },
-        transform: Transform {
-            rotation: Quat::from_rotation_x(-2.45),
-            ..Default::default()
-        },
+        transform: Transform::from_translation(Vec3::new(0.1, 5.5, -3.))
+            .looking_at(Vec3::ZERO, Vec3::Y),
         cascade_shadow_config: CascadeShadowConfigBuilder {
-            first_cascade_far_bound: 4.0,
+            first_cascade_far_bound: 7.0,
             minimum_distance: 0.,
             maximum_distance: 0.1,
             ..Default::default()

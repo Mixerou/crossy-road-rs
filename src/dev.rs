@@ -14,6 +14,7 @@ use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use bevy_rapier3d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 
 use crate::player::Player;
+use crate::world::Biome;
 
 pub struct DevelopmentPlugin;
 
@@ -113,6 +114,9 @@ fn update_ui(world: &mut World, mut context: Local<UiContext>) {
                 "Player XYZ: {:.0} {:.0} {:.0}",
                 player_translation.x, player_translation.y, player_translation.z,
             ));
+
+            let biome = world.resource_ref::<Biome>();
+            ui.label(format!("Chunks Spawned: {}", biome.chunks.len()));
 
             let Ok(mut window) = world
                 .query_filtered::<&mut bevy::prelude::Window, With<PrimaryWindow>>()

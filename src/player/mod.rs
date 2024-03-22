@@ -136,15 +136,6 @@ fn spawn(
                 child_animator,
             ));
         });
-
-    commands.spawn((PbrBundle {
-        mesh: characters.chicken.mesh.clone_weak(),
-        material: characters.chicken.material.clone_weak(),
-        transform: Transform::from_translation(child_translation)
-            .with_scale(Vec3::splat(child_scale)),
-        visibility: Visibility::Visible,
-        ..Default::default()
-    },));
 }
 
 fn move_player(

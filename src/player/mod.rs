@@ -77,6 +77,7 @@ pub struct Player {
     jump_queue: VecDeque<PlayerJumpDirection>,
     velocity: Vec3,
     is_grounded: bool,
+    is_initial_jump_made: bool,
 }
 
 #[derive(Default, Component)]
@@ -159,13 +160,14 @@ fn move_player(
     }
 
     if let Some(controller_output) = player_controller_outputs.iter().next() {
-        if !controller_output.collisions.is_empty() {
+        if player.is_initial_jump_made && !controller_output.collisions.is_empty() {
             player.jump_queue.pop_front();
             player.velocity = Vec3::ZERO;
             player.is_grounded = true;
         }
     }
 
+    player.is_initial_jump_made = true;
     controller.translation = Some(player.velocity * time.delta_seconds());
 
     if let (
@@ -179,16 +181,18 @@ fn move_player(
         player_model.start_rotation,
         player_model.end_rotation,
     ) {
-        let aka_delta_time = (time.elapsed_seconds() - rotation_start_at) / rotation_end_at;
+        let mut rotation_progress = (time.elapsed_seconds() - rotation_start_at) / rotation_end_at;
 
-        if aka_delta_time > 1. {
+        if rotation_progress > 1. {
+            rotation_progress = 1.;
             player_model.rotation_start_at = None;
             player_model.rotation_duration = None;
             player_model.start_rotation = None;
             player_model.end_rotation = None;
         }
 
-        let new_rotation = start_rotation * (1. - aka_delta_time) + end_rotation * aka_delta_time;
+        let new_rotation =
+            start_rotation * (1. - rotation_progress) + end_rotation * rotation_progress;
         child_transform.rotation = Quat::from_rotation_y(new_rotation % TAU);
     }
 }
@@ -225,15 +229,10 @@ fn handle_move_keys(
 
 fn init_player_move(
     time: Res<Time>,
-    mut players: Query<(
-        &mut Player,
-        &mut KinematicCharacterController,
-        &Transform,
-        &Children,
-    )>,
+    mut players: Query<(&mut Player, &Transform, &Children)>,
     mut player_children: Query<(&Transform, &mut PlayerModel)>,
 ) {
-    let Some((mut player, mut controller, transform, children)) = players.iter_mut().next() else {
+    let Some((mut player, transform, children)) = players.iter_mut().next() else {
         return;
     };
 
@@ -333,7 +332,7 @@ fn init_player_move(
 
     player.velocity = velocity_xz + velocity_y;
     player.is_grounded = false;
-    controller.translation = Some(player.velocity * time.delta_seconds());
+    player.is_initial_jump_made = false;
 }
 
 fn flatten_player(

@@ -1,5 +1,5 @@
+#[cfg(feature = "debug")]
 use std::fmt;
-use std::fmt::Display;
 
 use bevy::prelude::States;
 
@@ -32,7 +32,7 @@ impl CurrentBiome {
 }
 
 #[cfg(feature = "debug")]
-impl Display for CurrentBiome {
+impl fmt::Display for CurrentBiome {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let biome_name = match self {
             CurrentBiome::Default => "Default",

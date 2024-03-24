@@ -15,15 +15,19 @@ use dotenv::dotenv;
 use crate::camera::CameraPlugin;
 #[cfg(feature = "debug")]
 use crate::dev::DevelopmentPlugin;
+use crate::events::RequestChunkGeneration;
+use crate::lifecycle::LifecyclePlugin;
 use crate::player::PlayerPlugin;
 use crate::resources::ResourcePlugin;
-use crate::states::AppState;
+use crate::states::{AppState, CurrentBiome};
 use crate::world::WorldPlugin;
 
 mod camera;
 mod constants;
 #[cfg(feature = "debug")]
 mod dev;
+mod events;
+mod lifecycle;
 mod player;
 mod resources;
 mod states;
@@ -61,12 +65,16 @@ fn main() {
     ));
 
     // Current crate
-    app.init_state::<AppState>().add_plugins((
-        CameraPlugin,
-        PlayerPlugin,
-        ResourcePlugin,
-        WorldPlugin,
-    ));
+    app.add_event::<RequestChunkGeneration>()
+        .init_state::<AppState>()
+        .init_state::<CurrentBiome>()
+        .add_plugins((
+            CameraPlugin,
+            LifecyclePlugin,
+            PlayerPlugin,
+            ResourcePlugin,
+            WorldPlugin,
+        ));
 
     // For development
     #[cfg(feature = "debug")]

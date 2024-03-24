@@ -2,19 +2,23 @@ use std::time::{Duration, Instant};
 
 use bevy::app::{App, Update};
 use bevy::diagnostic::{Diagnostic, DiagnosticsStore, FrameTimeDiagnosticsPlugin};
+use bevy::ecs::system::SystemState;
 use bevy::math::Vec3;
-use bevy::prelude::{Local, Plugin, Transform, With, World};
+use bevy::prelude::{Local, NextState, Plugin, Res, ResMut, State, Transform, With, World};
 use bevy::window::{PresentMode, PrimaryWindow};
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::bevy_inspector::{
     ui_for_all_assets, ui_for_resources, ui_for_world_entities,
 };
-use bevy_inspector_egui::egui::{Button, CollapsingHeader, ScrollArea, Window};
+use bevy_inspector_egui::egui::{Button, CollapsingHeader, ComboBox, ScrollArea, Window};
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use bevy_rapier3d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 
 use crate::player::Player;
-use crate::world::Biome;
+use crate::states::CurrentBiome;
+use crate::world::Map;
+
+const GAP_BETWEEN_SECTIONS: f32 = 4.;
 
 pub struct DevelopmentPlugin;
 
@@ -72,7 +76,11 @@ fn parse_diagnostic(
     }
 }
 
-fn update_ui(world: &mut World, mut context: Local<UiContext>) {
+fn update_ui(
+    world: &mut World,
+    mut context: Local<UiContext>,
+    params: &mut SystemState<(Res<State<CurrentBiome>>, ResMut<NextState<CurrentBiome>>)>,
+) {
     let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
         .get_single(world)
@@ -115,8 +123,37 @@ fn update_ui(world: &mut World, mut context: Local<UiContext>) {
                 player_translation.x, player_translation.y, player_translation.z,
             ));
 
-            let biome = world.resource_ref::<Biome>();
-            ui.label(format!("Chunks Spawned: {}", biome.chunks.len()));
+            ui.add_space(GAP_BETWEEN_SECTIONS);
+
+            ui.collapsing("World", |ui| {
+                let chunks = match world.get_resource_ref::<Map>() {
+                    Some(map) => map.chunks.len().to_string(),
+                    None => "no map".into(),
+                };
+                ui.label(format!("Chunks Spawned: {}", chunks));
+
+                ui.horizontal(|ui| {
+                    ui.label("Current Biome");
+
+                    let (current_biome, mut current_biome_setter) = params.get_mut(world);
+                    ComboBox::from_label("")
+                        .selected_text(current_biome.to_string())
+                        .show_ui(ui, |ui| {
+                            ui.style_mut().wrap = Some(false);
+
+                            for (biome, biome_name) in CurrentBiome::all_variant_names() {
+                                let label =
+                                    ui.selectable_label(&biome == current_biome.get(), biome_name);
+
+                                if label.clicked() && &biome != current_biome.get() {
+                                    current_biome_setter.set(biome);
+                                }
+                            }
+                        });
+                });
+            });
+
+            ui.add_space(GAP_BETWEEN_SECTIONS);
 
             let Ok(mut window) = world
                 .query_filtered::<&mut bevy::prelude::Window, With<PrimaryWindow>>()

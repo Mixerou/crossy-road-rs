@@ -3,13 +3,13 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::app::{App, Plugin, Update};
 use bevy::asset::Assets;
-use bevy::hierarchy::{BuildChildren, Children};
+use bevy::hierarchy::{BuildChildren, Children, DespawnRecursiveExt};
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::PbrBundle;
 use bevy::prelude::{
-    in_state, Commands, Component, KeyCode, Mesh, OnEnter, Query, Res, ResMut, Transform,
-    Visibility,
+    in_state, Commands, Component, Entity, KeyCode, Mesh, OnEnter, Query, Res, ResMut, Transform,
+    Visibility, With,
 };
 use bevy::prelude::{IntoSystemConfigs, SpatialBundle};
 use bevy::time::Time;
@@ -36,6 +36,7 @@ pub struct PlayerPlugin;
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(AppState::Playing), spawn)
+            .add_systems(OnEnter(AppState::Clearing), despawn)
             .add_systems(
                 Update,
                 (
@@ -137,6 +138,12 @@ fn spawn(
                 child_animator,
             ));
         });
+}
+
+fn despawn(mut commands: Commands, mut players: Query<Entity, With<Player>>) {
+    for entity in players.iter_mut() {
+        commands.entity(entity).despawn_recursive();
+    }
 }
 
 fn move_player(

@@ -15,7 +15,8 @@ pub struct CameraPlugin;
 impl Plugin for CameraPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, spawn_camera)
-            .add_systems(Update, follow_player.run_if(in_state(AppState::Playing)));
+            .add_systems(Update, follow_player.run_if(in_state(AppState::Playing)))
+            .add_systems(OnEnter(AppState::Clearing), translate_to_spawn);
     }
 }
 
@@ -81,4 +82,15 @@ fn follow_player(
             ),
         },
     ));
+}
+
+fn translate_to_spawn(
+    mut cameras: Query<(&mut Animator<Transform>, &mut Transform), With<Camera>>,
+) {
+    let Some((mut animator, mut transform)) = cameras.iter_mut().next() else {
+        return;
+    };
+
+    animator.tweenable_mut().set_progress(1.);
+    transform.translation = CAMERA_SPAWN_POINT;
 }

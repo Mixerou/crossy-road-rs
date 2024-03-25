@@ -64,7 +64,7 @@ impl PlayerModelSize {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, PartialEq)]
 pub enum PlayerJumpDirection {
     #[default]
     Forward,
@@ -222,14 +222,38 @@ fn handle_move_keys(
     } else if keyboard_input.any_just_released(PLAYER_MOVE_BACK_KEY_CODES) {
         player.jump_queue.push_back(PlayerJumpDirection::Back);
     } else if keyboard_input.any_just_released(PLAYER_MOVE_LEFT_KEY_CODES) {
-        if player_translation.z.round() as i8 - player.jump_queue.len() as i8 <= GAMEPLAY_MIN_Z {
+        let left_queue = player
+            .jump_queue
+            .iter()
+            .filter(|jump| *jump == &PlayerJumpDirection::Left)
+            .count() as i8;
+        let right_queue = player
+            .jump_queue
+            .iter()
+            .filter(|jump| *jump == &PlayerJumpDirection::Right)
+            .count() as i8;
+
+        if player_translation.z.round() as i8 - left_queue + right_queue <= GAMEPLAY_MIN_Z {
             return;
         }
+
         player.jump_queue.push_back(PlayerJumpDirection::Left);
     } else if keyboard_input.any_just_released(PLAYER_MOVE_RIGHT_KEY_CODES) {
-        if player_translation.z.round() as i8 + player.jump_queue.len() as i8 >= GAMEPLAY_MAX_Z {
+        let left_queue = player
+            .jump_queue
+            .iter()
+            .filter(|jump| *jump == &PlayerJumpDirection::Left)
+            .count() as i8;
+        let right_queue = player
+            .jump_queue
+            .iter()
+            .filter(|jump| *jump == &PlayerJumpDirection::Right)
+            .count() as i8;
+
+        if player_translation.z.round() as i8 - left_queue + right_queue >= GAMEPLAY_MAX_Z {
             return;
         }
+
         player.jump_queue.push_back(PlayerJumpDirection::Right);
     }
 }

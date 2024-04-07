@@ -2,14 +2,13 @@ use std::collections::VecDeque;
 use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use bevy::app::{App, Plugin, Update};
-use bevy::asset::Assets;
 use bevy::hierarchy::{BuildChildren, Children, DespawnRecursiveExt};
 use bevy::input::ButtonInput;
 use bevy::math::{Quat, Vec3};
 use bevy::pbr::PbrBundle;
 use bevy::prelude::{
-    in_state, Commands, Component, Entity, KeyCode, Mesh, OnEnter, Query, Res, ResMut, Transform,
-    Visibility, With,
+    in_state, Commands, Component, Entity, KeyCode, NextState, OnEnter, Query, Res, ResMut,
+    Resource, State, Transform, Visibility, With,
 };
 use bevy::prelude::{IntoSystemConfigs, SpatialBundle};
 use bevy::time::Time;
@@ -22,32 +21,60 @@ use bevy_tweening::lens::{TransformPositionLens, TransformScaleLens};
 use bevy_tweening::{Animator, AnimatorState, EaseFunction, Sequence, Tracks, Tween};
 
 use crate::constants::{
-    FLATTEN_SCALE, GAMEPLAY_MAX_Z, GAMEPLAY_MIN_Z, GLOBAL_GRAVITY, PLAYER_ANIMATION_DURATION,
-    PLAYER_CHARACTER_SIZE, PLAYER_JUMP_HEIGHT, PLAYER_MAX_JUMP_QUEUE, PLAYER_MOVE_BACK_KEY_CODES,
-    PLAYER_MOVE_FORWARD_KEY_CODES, PLAYER_MOVE_LEFT_KEY_CODES, PLAYER_MOVE_RIGHT_KEY_CODES,
-    PLAYER_SPAWN_POINT,
+    FLATTEN_SCALE, GLOBAL_GRAVITY, MAP_GAMEPLAY_MAX_Z, MAP_GAMEPLAY_MIN_Z,
+    PLAYER_ANIMATION_DURATION, PLAYER_CHARACTER_SIZE, PLAYER_JUMP_HEIGHT, PLAYER_MAX_JUMP_QUEUE,
+    PLAYER_MOVE_BACK_KEY_CODES, PLAYER_MOVE_FORWARD_KEY_CODES, PLAYER_MOVE_LEFT_KEY_CODES,
+    PLAYER_MOVE_RIGHT_KEY_CODES, PLAYER_SPAWN_POINT,
 };
-use crate::resources::CharacterCollection;
+use crate::resources::{Character, CharacterCollection};
 use crate::states::AppState;
 use crate::utils;
+use crate::world::Map;
 
 pub struct PlayerPlugin;
 
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnEnter(AppState::Playing), spawn)
-            .add_systems(OnEnter(AppState::Clearing), despawn)
-            .add_systems(
-                Update,
-                (
-                    move_player,
-                    handle_move_keys,
-                    init_player_move,
-                    flatten_player,
-                )
-                    .chain()
-                    .run_if(in_state(AppState::Playing)),
-            );
+        app.add_systems(
+            OnEnter(AppState::InsertingCurrentCharacter),
+            CurrentCharacter::insert_resource,
+        )
+        .add_systems(OnEnter(AppState::Playing), spawn)
+        .add_systems(OnEnter(AppState::Clearing), despawn)
+        .add_systems(
+            Update,
+            (
+                move_player,
+                handle_move_keys,
+                init_player_move,
+                flatten_player,
+            )
+                .chain()
+                .run_if(in_state(AppState::Playing)),
+        );
+    }
+}
+
+#[derive(Resource)]
+pub struct CurrentCharacter(Character);
+
+impl CurrentCharacter {
+    pub fn new(character: Character) -> Self {
+        Self(character)
+    }
+
+    pub fn get(&self) -> &Character {
+        &self.0
+    }
+
+    fn insert_resource(
+        mut commands: Commands,
+        mut app_state_setter: ResMut<NextState<AppState>>,
+        app_state: Res<State<AppState>>,
+        characters: Res<CharacterCollection>,
+    ) {
+        commands.insert_resource(Self::new(characters.chicken.clone()));
+        app_state_setter.set(app_state.get().next());
     }
 }
 
@@ -89,18 +116,10 @@ pub struct PlayerModel {
     pub end_rotation: Option<f32>,
 }
 
-fn spawn(
-    mut commands: Commands,
-    meshes: ResMut<Assets<Mesh>>,
-    characters: Res<CharacterCollection>,
-) {
-    let child_mesh = meshes
-        .get(characters.chicken.mesh.clone())
-        .expect("Failed to get character mesh");
-    // Let's pretend we didn't know the size
-    let child_size = PlayerModelSize::new(utils::calculate_mesh_size(child_mesh));
-    let child_scale = PLAYER_CHARACTER_SIZE / child_size.get().max_element();
-    let child_translation = Vec3::new(0., -child_size.get().y / 2. * child_scale, 0.);
+fn spawn(mut commands: Commands, characters: Res<CharacterCollection>) {
+    let child_size = characters.chicken.model.mesh_size;
+    let child_scale = PLAYER_CHARACTER_SIZE / child_size.max_element();
+    let child_translation = Vec3::new(0., -child_size.y / 2. * child_scale, 0.);
     let child_animator = Animator::new(Tween::new(
         EaseFunction::CubicInOut,
         PLAYER_ANIMATION_DURATION,
@@ -126,15 +145,15 @@ fn spawn(
         .with_children(|builder| {
             builder.spawn((
                 PbrBundle {
-                    mesh: characters.chicken.mesh.clone(),
-                    material: characters.chicken.material.clone(),
+                    mesh: characters.chicken.model.mesh.clone(),
+                    material: characters.chicken.model.material.clone(),
                     transform: Transform::from_translation(child_translation)
                         .with_scale(Vec3::splat(child_scale)),
                     visibility: Visibility::Visible,
                     ..Default::default()
                 },
                 PlayerModel::default(),
-                child_size,
+                PlayerModelSize::new(child_size),
                 child_animator,
             ));
         });
@@ -226,14 +245,14 @@ fn handle_move_keys(
             .jump_queue
             .iter()
             .filter(|jump| *jump == &PlayerJumpDirection::Left)
-            .count() as i8;
+            .count() as i32;
         let right_queue = player
             .jump_queue
             .iter()
             .filter(|jump| *jump == &PlayerJumpDirection::Right)
-            .count() as i8;
+            .count() as i32;
 
-        if player_translation.z.round() as i8 - left_queue + right_queue <= GAMEPLAY_MIN_Z {
+        if player_translation.z.round() as i32 - left_queue + right_queue <= MAP_GAMEPLAY_MIN_Z {
             return;
         }
 
@@ -243,14 +262,14 @@ fn handle_move_keys(
             .jump_queue
             .iter()
             .filter(|jump| *jump == &PlayerJumpDirection::Left)
-            .count() as i8;
+            .count() as i32;
         let right_queue = player
             .jump_queue
             .iter()
             .filter(|jump| *jump == &PlayerJumpDirection::Right)
-            .count() as i8;
+            .count() as i32;
 
-        if player_translation.z.round() as i8 - left_queue + right_queue >= GAMEPLAY_MAX_Z {
+        if player_translation.z.round() as i32 - left_queue + right_queue >= MAP_GAMEPLAY_MAX_Z {
             return;
         }
 
@@ -260,6 +279,7 @@ fn handle_move_keys(
 
 fn init_player_move(
     time: Res<Time>,
+    map: Res<Map>,
     mut players: Query<(&mut Player, &Transform, &Children)>,
     mut player_children: Query<(&Transform, &mut PlayerModel)>,
 ) {
@@ -295,6 +315,15 @@ fn init_player_move(
 
     let displacement_y = 0.;
     let displacement_xz = Vec3::new(target_x, 0., target_z);
+
+    let final_position = (player_translation + displacement_xz).round();
+    if map
+        .obstacles_xz
+        .get(&(final_position.x as i32, final_position.z as i32))
+        .is_some()
+    {
+        return;
+    }
 
     let velocity_y = Vec3::Y * f32::sqrt(-2. * -GLOBAL_GRAVITY * PLAYER_JUMP_HEIGHT);
     let velocity_xz = displacement_xz

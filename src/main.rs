@@ -15,7 +15,9 @@ use dotenv::dotenv;
 use crate::camera::CameraPlugin;
 #[cfg(feature = "debug")]
 use crate::dev::DevelopmentPlugin;
-use crate::events::RequestChunkGeneration;
+#[cfg(feature = "debug")]
+use crate::events::DevRequestBiome;
+use crate::events::{RequestNewChunkSpawning, RequestOldChunkDespawning};
 use crate::lifecycle::LifecyclePlugin;
 use crate::player::PlayerPlugin;
 use crate::resources::ResourcePlugin;
@@ -65,7 +67,8 @@ fn main() {
     ));
 
     // Current crate
-    app.add_event::<RequestChunkGeneration>()
+    app.add_event::<RequestNewChunkSpawning>()
+        .add_event::<RequestOldChunkDespawning>()
         .init_state::<AppState>()
         .init_state::<CurrentBiome>()
         .add_plugins((
@@ -78,7 +81,8 @@ fn main() {
 
     // For development
     #[cfg(feature = "debug")]
-    app.add_plugins(DevelopmentPlugin);
+    app.add_event::<DevRequestBiome>()
+        .add_plugins(DevelopmentPlugin);
 
     app.run()
 }

@@ -1,4 +1,7 @@
+use std::f32::consts::PI;
+
 use bevy::app::{App, Plugin, Update};
+use bevy::math::Quat;
 use bevy::pbr::PbrBundle;
 use bevy::prelude::{
     in_state, Commands, EventReader, In, IntoSystem, IntoSystemConfigs, OnEnter, OnExit, Res,
@@ -9,16 +12,16 @@ use bevy_rapier3d::geometry::Collider;
 
 use crate::constants::{MAP_GAMEPLAY_MAX_Z, MAP_GAMEPLAY_MIN_Z, MAP_MAX_Z, MAP_MIN_X, MAP_MIN_Z};
 use crate::events::RequestNewChunkSpawning;
-use crate::resources::GroundCollection;
+use crate::resources::{GroundCollection, ObjectCollection};
 use crate::states::CurrentBiome;
-use crate::world::biomes::{Ground, StandardBiomeSystems};
+use crate::world::biomes::{Ground, Object, StandardBiomeSystems};
 use crate::world::{Chunk, Map};
 
-pub struct DefaultBiome;
+pub struct CrossyValleyBiome;
 
-const CURRENT_BIOME: CurrentBiome = CurrentBiome::Default;
+const CURRENT_BIOME: CurrentBiome = CurrentBiome::CrossyValley;
 
-impl Plugin for DefaultBiome {
+impl Plugin for CrossyValleyBiome {
     fn build(&self, app: &mut App) {
         app.add_systems(OnEnter(CURRENT_BIOME), StandardBiomeSystems::enter_biome)
             .add_systems(
@@ -35,9 +38,7 @@ impl Plugin for DefaultBiome {
     }
 }
 
-impl DefaultBiome {
-    // fn enter_biome() {}
-
+impl CrossyValleyBiome {
     fn spawn_new_chunk(
         mut new_chunk_spawning_requests: EventReader<RequestNewChunkSpawning>,
         map: Res<Map>,
@@ -102,8 +103,53 @@ impl DefaultBiome {
         x
     }
 
-    fn spawn_objects(In(_x): In<Vec<i32>>) {}
+    fn spawn_objects(
+        In(x): In<Vec<i32>>,
+        mut commands: Commands,
+        mut map: ResMut<Map>,
+        objects: Res<ObjectCollection>,
+    ) {
+        for x in x {
+            for z in MAP_MIN_Z..MAP_MAX_Z {
+                if z == 0 {
+                    continue;
+                }
 
-    // fn despawn_old_chunk() {}
-    // fn leave_biome() {}
+                let (model, rotation_factor) = match map.random_generator.rand_range(0..101) {
+                    number if number <= 15 => {
+                        let tree = map
+                            .random_generator
+                            .rand_range(0..objects.trees.len() as u32);
+                        let Some(tree) = objects.trees.get(tree as usize) else {
+                            continue;
+                        };
+
+                        (tree, map.random_generator.rand_range(1..3) as f32)
+                    }
+                    number if number <= 20 => (
+                        &objects.boulder,
+                        map.random_generator.rand_range(1..4) as f32 / 2.,
+                    ),
+                    _ => continue,
+                };
+
+                let obstacle = commands.spawn((
+                    PbrBundle {
+                        mesh: model.mesh.clone(),
+                        material: model.material.clone(),
+                        transform: Transform::from_xyz(
+                            x as f32,
+                            0.5 + model.mesh_size.y / 2.,
+                            z as f32,
+                        )
+                        .with_rotation(Quat::from_rotation_y(rotation_factor * PI)),
+                        ..Default::default()
+                    },
+                    Object,
+                ));
+
+                map.obstacles_xz.insert((x, z), obstacle.id());
+            }
+        }
+    }
 }

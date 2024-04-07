@@ -4,7 +4,9 @@ use bevy::app::{App, Update};
 use bevy::diagnostic::{Diagnostic, DiagnosticsStore, FrameTimeDiagnosticsPlugin};
 use bevy::ecs::system::SystemState;
 use bevy::math::Vec3;
-use bevy::prelude::{Local, NextState, Plugin, Res, ResMut, State, Transform, With, World};
+use bevy::prelude::{
+    EventWriter, Local, NextState, Plugin, Res, ResMut, State, Transform, With, World,
+};
 use bevy::window::{PresentMode, PrimaryWindow};
 use bevy_inspector_egui::bevy_egui::{EguiContext, EguiPlugin};
 use bevy_inspector_egui::bevy_inspector::{
@@ -14,6 +16,7 @@ use bevy_inspector_egui::egui::{Button, CollapsingHeader, ComboBox, ScrollArea, 
 use bevy_inspector_egui::DefaultInspectorConfigPlugin;
 use bevy_rapier3d::render::{DebugRenderContext, RapierDebugRenderPlugin};
 
+use crate::events::DevRequestBiome;
 use crate::player::Player;
 use crate::states::CurrentBiome;
 use crate::world::Map;
@@ -79,7 +82,11 @@ fn parse_diagnostic(
 fn update_ui(
     world: &mut World,
     mut context: Local<UiContext>,
-    params: &mut SystemState<(Res<State<CurrentBiome>>, ResMut<NextState<CurrentBiome>>)>,
+    params: &mut SystemState<(
+        EventWriter<DevRequestBiome>,
+        Res<State<CurrentBiome>>,
+        ResMut<NextState<CurrentBiome>>,
+    )>,
 ) {
     let Ok(egui_context) = world
         .query_filtered::<&mut EguiContext, With<PrimaryWindow>>()
@@ -135,7 +142,8 @@ fn update_ui(
                 ui.horizontal(|ui| {
                     ui.label("Current Biome");
 
-                    let (current_biome, mut current_biome_setter) = params.get_mut(world);
+                    let (mut biome_requester, current_biome, mut current_biome_setter) =
+                        params.get_mut(world);
                     ComboBox::from_label("")
                         .selected_text(current_biome.to_string())
                         .show_ui(ui, |ui| {
@@ -146,7 +154,8 @@ fn update_ui(
                                     ui.selectable_label(&biome == current_biome.get(), biome_name);
 
                                 if label.clicked() && &biome != current_biome.get() {
-                                    current_biome_setter.set(biome);
+                                    current_biome_setter.set(CurrentBiome::None);
+                                    biome_requester.send(DevRequestBiome::new(biome));
                                 }
                             }
                         });

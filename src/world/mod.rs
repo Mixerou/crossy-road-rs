@@ -1,14 +1,22 @@
 use std::collections::VecDeque;
 
 use bevy::app::{App, Plugin, Update};
-use bevy::hierarchy::DespawnRecursiveExt;
+#[cfg(feature = "debug")]
+use bevy::prelude::EventReader;
 use bevy::prelude::{
-    in_state, Commands, Entity, EventWriter, IntoSystemConfigs, NextState, OnEnter, Query, ResMut,
-    Resource, ViewVisibility,
+    in_state, Entity, EventWriter, IntoSystemConfigs, NextState, OnEnter, Query, Res, ResMut,
+    Resource, State, ViewVisibility,
 };
+use bevy::utils::HashMap;
+use oorandom::Rand32;
 
-use crate::events::RequestChunkGeneration;
+#[cfg(feature = "debug")]
+use crate::events::DevRequestBiome;
+use crate::events::{RequestNewChunkSpawning, RequestOldChunkDespawning};
+use crate::player::CurrentCharacter;
 use crate::states::{AppState, CurrentBiome};
+use crate::world::biomes::crossy_valley::CrossyValleyBiome;
+#[cfg(feature = "debug")]
 use crate::world::biomes::default::DefaultBiome;
 
 mod biomes;
@@ -17,8 +25,11 @@ pub struct WorldPlugin;
 
 impl Plugin for WorldPlugin {
     fn build(&self, app: &mut App) {
+        #[cfg(feature = "debug")]
+        app.add_plugins(DefaultBiome);
+
         app.init_resource::<Map>()
-            .add_plugins(DefaultBiome)
+            .add_plugins(CrossyValleyBiome)
             .add_systems(OnEnter(AppState::InitialisingWorld), init_world)
             .add_systems(
                 Update,
@@ -29,33 +40,62 @@ impl Plugin for WorldPlugin {
 
 #[derive(Clone)]
 pub struct Chunk {
-    pub position_x: isize,
+    pub position_x: i32,
     pub entities: Vec<Entity>,
 }
 
-#[derive(Clone, Default, Resource)]
+#[derive(Clone, Resource)]
 pub struct Map {
+    pub random_generator: Rand32,
     pub chunks: VecDeque<Chunk>,
+    pub obstacles_xz: HashMap<(i32, i32), Entity>,
+}
+
+impl Default for Map {
+    fn default() -> Self {
+        Self {
+            random_generator: Rand32::new(0),
+            chunks: Default::default(),
+            obstacles_xz: Default::default(),
+        }
+    }
 }
 
 fn init_world(
-    mut chunk_generation_requester: EventWriter<RequestChunkGeneration>,
+    #[cfg(feature = "debug")] mut biome_dev_requests: EventReader<DevRequestBiome>,
+    mut chunk_generation_requester: EventWriter<RequestNewChunkSpawning>,
     mut app_state: ResMut<NextState<AppState>>,
-    mut current_biome: ResMut<NextState<CurrentBiome>>,
+    mut current_biome_setter: ResMut<NextState<CurrentBiome>>,
+    mut map: ResMut<Map>,
+    current_biome: Res<State<CurrentBiome>>,
+    current_character: Res<CurrentCharacter>,
 ) {
-    current_biome.set(CurrentBiome::Default);
+    if current_biome.get().eq(&CurrentBiome::None) {
+        #[cfg(feature = "debug")]
+        match biome_dev_requests.read().next() {
+            Some(biome) if biome.get().ne(&CurrentBiome::None) => {
+                current_biome_setter.set(biome.get())
+            }
+            _ => current_biome_setter.set(current_character.get().biome),
+        };
+
+        #[cfg(not(feature = "debug"))]
+        current_biome_setter.set(current_character.get().biome);
+    }
+
+    map.random_generator = Rand32::new(0);
 
     for _ in 0..16 {
-        chunk_generation_requester.send(RequestChunkGeneration);
+        chunk_generation_requester.send(RequestNewChunkSpawning);
     }
 
     app_state.set(AppState::Playing);
 }
 
 fn check_chunk_visibilities(
-    mut commands: Commands,
-    mut chunk_generation_requester: EventWriter<RequestChunkGeneration>,
-    mut map: ResMut<Map>,
+    mut new_chunk_spawning_requester: EventWriter<RequestNewChunkSpawning>,
+    mut old_chunk_despawning_requester: EventWriter<RequestOldChunkDespawning>,
+    map: ResMut<Map>,
     entities: Query<&ViewVisibility>,
 ) {
     // Checks to create new chunks
@@ -68,7 +108,7 @@ fn check_chunk_visibilities(
                 Err(_) => false,
             })
         {
-            chunk_generation_requester.send(RequestChunkGeneration);
+            new_chunk_spawning_requester.send(RequestNewChunkSpawning);
         }
     }
 
@@ -85,12 +125,6 @@ fn check_chunk_visibilities(
             return;
         }
 
-        for entity in &chunk.entities {
-            if let Some(entity) = commands.get_entity(*entity) {
-                entity.despawn_recursive();
-            }
-        }
-
-        map.chunks.pop_front();
+        old_chunk_despawning_requester.send(RequestOldChunkDespawning);
     }
 }

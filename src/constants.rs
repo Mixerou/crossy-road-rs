@@ -7,9 +7,12 @@ use bevy::prelude::KeyCode;
 pub const CAMERA_MOVEMENT_SPEED: Duration = Duration::from_secs(1);
 pub const CAMERA_SPAWN_POINT: Vec3 = Vec3::new(-1.5, 3.0, 0.75);
 
-// Gameplay
-pub const GAMEPLAY_MIN_Z: i8 = -4;
-pub const GAMEPLAY_MAX_Z: i8 = 4;
+// Map
+pub const MAP_MIN_X: i32 = -8;
+pub const MAP_MIN_Z: i32 = -10;
+pub const MAP_MAX_Z: i32 = 10;
+pub const MAP_GAMEPLAY_MIN_Z: i32 = -4;
+pub const MAP_GAMEPLAY_MAX_Z: i32 = 4;
 
 // Objects scaling
 pub const FLATTEN_SCALE: Vec3 = Vec3::new(1.125, 0.875, 1.125);

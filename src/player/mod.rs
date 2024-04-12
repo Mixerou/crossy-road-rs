@@ -22,7 +22,7 @@ use bevy_tweening::{Animator, AnimatorState, EaseFunction, Sequence, Tracks, Twe
 
 use crate::constants::{
     FLATTEN_SCALE, GLOBAL_GRAVITY, MAP_GAMEPLAY_MAX_Z, MAP_GAMEPLAY_MIN_Z,
-    PLAYER_ANIMATION_DURATION, PLAYER_CHARACTER_SIZE, PLAYER_JUMP_HEIGHT, PLAYER_MAX_JUMP_QUEUE,
+    PLAYER_ANIMATION_DURATION, PLAYER_JUMP_HEIGHT, PLAYER_MAX_JUMP_QUEUE,
     PLAYER_MOVE_BACK_KEY_CODES, PLAYER_MOVE_FORWARD_KEY_CODES, PLAYER_MOVE_LEFT_KEY_CODES,
     PLAYER_MOVE_RIGHT_KEY_CODES, PLAYER_SPAWN_POINT,
 };
@@ -78,19 +78,6 @@ impl CurrentCharacter {
     }
 }
 
-#[derive(Component)]
-pub struct PlayerModelSize(Vec3);
-
-impl PlayerModelSize {
-    pub fn new(size: Vec3) -> Self {
-        Self(size)
-    }
-
-    pub fn get(&self) -> Vec3 {
-        self.0
-    }
-}
-
 #[derive(Default, PartialEq)]
 pub enum PlayerJumpDirection {
     #[default]
@@ -117,9 +104,7 @@ pub struct PlayerModel {
 }
 
 fn spawn(mut commands: Commands, characters: Res<CharacterCollection>) {
-    let child_size = characters.chicken.model.mesh_size;
-    let child_scale = PLAYER_CHARACTER_SIZE / child_size.max_element();
-    let child_translation = Vec3::new(0., -child_size.y / 2. * child_scale, 0.);
+    let child_translation = Vec3::new(0., -0.5 + characters.chicken.model.mesh_size.y / 2., 0.);
     let child_animator = Animator::new(Tween::new(
         EaseFunction::CubicInOut,
         PLAYER_ANIMATION_DURATION,
@@ -147,13 +132,11 @@ fn spawn(mut commands: Commands, characters: Res<CharacterCollection>) {
                 PbrBundle {
                     mesh: characters.chicken.model.mesh.clone(),
                     material: characters.chicken.model.material.clone(),
-                    transform: Transform::from_translation(child_translation)
-                        .with_scale(Vec3::splat(child_scale)),
+                    transform: Transform::from_translation(child_translation),
                     visibility: Visibility::Visible,
                     ..Default::default()
                 },
                 PlayerModel::default(),
-                PlayerModelSize::new(child_size),
                 child_animator,
             ));
         });
@@ -397,8 +380,9 @@ fn init_player_move(
 
 fn flatten_player(
     keyboard_input: Res<ButtonInput<KeyCode>>,
+    current_character: Res<CurrentCharacter>,
     mut players: Query<(&Player, &Children)>,
-    mut player_children: Query<(&Transform, &PlayerModelSize, &mut Animator<Transform>)>,
+    mut player_children: Query<(&Transform, &mut Animator<Transform>)>,
 ) {
     let Some((player, children)) = players.iter_mut().next() else {
         return;
@@ -406,11 +390,9 @@ fn flatten_player(
     let Some(child) = children.first() else {
         return;
     };
-    let Ok((child_transform, child_size, mut child_animator)) = player_children.get_mut(*child)
-    else {
+    let Ok((child_transform, mut child_animator)) = player_children.get_mut(*child) else {
         return;
     };
-    let child_scale = Vec3::splat(PLAYER_CHARACTER_SIZE / child_size.get().max_element());
 
     if !player.is_grounded || !player.jump_queue.is_empty() {
         child_animator.state = AnimatorState::Paused;
@@ -424,25 +406,15 @@ fn flatten_player(
         return;
     }
 
+    let child_model_size_y = current_character.get().model.mesh_size.y;
     let (end_position, end_scale) =
         match keyboard_input.any_pressed(utils::get_player_move_key_codes()) {
             true => {
-                let end_scale = child_scale * FLATTEN_SCALE;
-                let initial_position_y = -child_size.get().y / 2. * child_scale.y;
-                let flatten_position_y = -child_size.get().y * end_scale.y / 2.;
-                (
-                    Vec3::new(
-                        0.,
-                        initial_position_y + (initial_position_y - flatten_position_y),
-                        0.,
-                    ),
-                    end_scale,
-                )
+                let end_position_y = -0.5 + child_model_size_y * FLATTEN_SCALE.y / 2.;
+
+                (Vec3::new(0., end_position_y, 0.), FLATTEN_SCALE)
             }
-            false => (
-                Vec3::new(0., -child_size.get().y / 2. * child_scale.y, 0.),
-                child_scale,
-            ),
+            false => (Vec3::new(0., -0.5 + child_model_size_y / 2., 0.), Vec3::ONE),
         };
 
     if child_transform.scale == end_scale && child_transform.translation == end_position {

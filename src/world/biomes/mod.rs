@@ -79,7 +79,7 @@ impl StandardBiomeSystems {
     fn leave_biome(
         mut commands: Commands,
         mut map: ResMut<Map>,
-        entities: Query<Entity, Or<(With<DirectionalLight>, With<Ground>, With<Object>)>>,
+        entities: Query<Entity, Or<(With<DirectionalLight>, With<Ground>, With<Obstacle>)>>,
     ) {
         for entity in &entities {
             if let Some(entity) = commands.get_entity(entity) {
@@ -96,4 +96,4 @@ impl StandardBiomeSystems {
 pub struct Ground;
 
 #[derive(Component)]
-pub struct Object;
+pub struct Obstacle;

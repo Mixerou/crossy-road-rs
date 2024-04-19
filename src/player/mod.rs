@@ -26,7 +26,7 @@ use crate::constants::{
     PLAYER_MOVE_BACK_KEY_CODES, PLAYER_MOVE_FORWARD_KEY_CODES, PLAYER_MOVE_LEFT_KEY_CODES,
     PLAYER_MOVE_RIGHT_KEY_CODES, PLAYER_SPAWN_POINT,
 };
-use crate::resources::{Character, CharacterCollection};
+use crate::resources::characters::{Character, CharacterCollection};
 use crate::states::AppState;
 use crate::utils;
 use crate::world::Map;

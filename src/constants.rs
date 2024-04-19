@@ -14,7 +14,7 @@ pub const MAP_MAX_Z: i32 = 10;
 pub const MAP_GAMEPLAY_MIN_Z: i32 = -4;
 pub const MAP_GAMEPLAY_MAX_Z: i32 = 4;
 
-// Objects scaling
+// Characters scaling
 pub const FLATTEN_SCALE: Vec3 = Vec3::new(1.125, 0.875, 1.125);
 
 // Player

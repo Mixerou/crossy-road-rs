@@ -12,9 +12,10 @@ use bevy_rapier3d::geometry::Collider;
 
 use crate::constants::{MAP_GAMEPLAY_MAX_Z, MAP_GAMEPLAY_MIN_Z, MAP_MAX_Z, MAP_MIN_X, MAP_MIN_Z};
 use crate::events::RequestNewChunkSpawning;
-use crate::resources::{GroundCollection, ObjectCollection};
+use crate::resources::grounds::GroundCollection;
+use crate::resources::obstacles::ObstacleCollection;
 use crate::states::CurrentBiome;
-use crate::world::biomes::{Ground, Object, StandardBiomeSystems};
+use crate::world::biomes::{Ground, Obstacle, StandardBiomeSystems};
 use crate::world::{Chunk, Map};
 
 pub struct CrossyValleyBiome;
@@ -29,7 +30,7 @@ impl Plugin for CrossyValleyBiome {
                 (
                     Self::spawn_new_chunk
                         .pipe(Self::spawn_ground)
-                        .pipe(Self::spawn_objects),
+                        .pipe(Self::spawn_obstacles),
                     StandardBiomeSystems::despawn_old_chunk,
                 )
                     .distributive_run_if(in_state(CURRENT_BIOME)),
@@ -69,20 +70,20 @@ impl CrossyValleyBiome {
             for z in MAP_MIN_Z..MAP_MAX_Z {
                 let cube = if x % 2 == 0 {
                     match (MAP_GAMEPLAY_MIN_Z..=MAP_GAMEPLAY_MAX_Z).contains(&z) {
-                        true => grounds.light_cube.clone(),
-                        false => grounds.light_dimmed_block.clone(),
+                        true => &grounds.light_cube.default,
+                        false => &grounds.light_cube.dimmed,
                     }
                 } else {
                     match (MAP_GAMEPLAY_MIN_Z..=MAP_GAMEPLAY_MAX_Z).contains(&z) {
-                        true => grounds.dark_cube.clone(),
-                        false => grounds.dark_dimmed_cube.clone(),
+                        true => &grounds.dark_cube.default,
+                        false => &grounds.dark_cube.dimmed,
                     }
                 };
 
                 let ground = commands.spawn((
                     PbrBundle {
-                        mesh: cube.mesh,
-                        material: cube.material,
+                        mesh: cube.mesh.clone_weak(),
+                        material: cube.material.clone_weak(),
                         transform: Transform::from_xyz(x as f32, 0., z as f32),
                         ..Default::default()
                     },
@@ -103,11 +104,11 @@ impl CrossyValleyBiome {
         x
     }
 
-    fn spawn_objects(
+    fn spawn_obstacles(
         In(x): In<Vec<i32>>,
         mut commands: Commands,
         mut map: ResMut<Map>,
-        objects: Res<ObjectCollection>,
+        obstacles: Res<ObstacleCollection>,
     ) {
         for x in x {
             for z in MAP_MIN_Z..MAP_MAX_Z {
@@ -116,18 +117,12 @@ impl CrossyValleyBiome {
                 }
 
                 let (model, rotation_factor) = match map.random_generator.rand_range(0..101) {
-                    number if number <= 15 => {
-                        let tree = map
-                            .random_generator
-                            .rand_range(0..objects.trees.len() as u32);
-                        let Some(tree) = objects.trees.get(tree as usize) else {
-                            continue;
-                        };
-
-                        (tree, map.random_generator.rand_range(1..3) as f32)
-                    }
+                    number if number <= 15 => (
+                        obstacles.trees.get_random(&mut map.random_generator),
+                        map.random_generator.rand_range(1..3) as f32,
+                    ),
                     number if number <= 20 => (
-                        &objects.boulder,
+                        &obstacles.boulder,
                         map.random_generator.rand_range(1..4) as f32 / 2.,
                     ),
                     _ => continue,
@@ -135,8 +130,8 @@ impl CrossyValleyBiome {
 
                 let obstacle = commands.spawn((
                     PbrBundle {
-                        mesh: model.mesh.clone(),
-                        material: model.material.clone(),
+                        mesh: model.mesh.clone_weak(),
+                        material: model.material.clone_weak(),
                         transform: Transform::from_xyz(
                             x as f32,
                             0.5 + model.mesh_size.y / 2.,
@@ -145,7 +140,7 @@ impl CrossyValleyBiome {
                         .with_rotation(Quat::from_rotation_y(rotation_factor * PI)),
                         ..Default::default()
                     },
-                    Object,
+                    Obstacle,
                 ));
 
                 map.obstacles_xz.insert((x, z), obstacle.id());

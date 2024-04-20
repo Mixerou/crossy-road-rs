@@ -123,7 +123,11 @@ impl CrossyValleyBiome {
                     ),
                     number if number <= 20 => (
                         &obstacles.boulder,
-                        map.random_generator.rand_range(1..4) as f32 / 2.,
+                        map.random_generator.rand_range(0..4) as f32 / 2.,
+                    ),
+                    number if number <= 21 => (
+                        &obstacles.stump,
+                        map.random_generator.rand_range(0..4) as f32 / 2.,
                     ),
                     _ => continue,
                 };

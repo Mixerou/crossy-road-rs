@@ -8,6 +8,7 @@ use crate::resources::{AssetLoading, Model};
 #[derive(Debug, Resource)]
 pub struct ObstacleCollection {
     pub boulder: Model,
+    pub stump: Model,
     pub trees: TreeObstacles,
 }
 
@@ -55,6 +56,13 @@ impl ObstacleCollection {
                 "obstacles/boulder",
                 "obstacles/boulder",
             ),
+            stump: Model::load(
+                &mut materials,
+                &mut asset_loading,
+                &asset_server,
+                "obstacles/stump",
+                "obstacles/stump",
+            ),
             trees,
         };
 
@@ -63,6 +71,7 @@ impl ObstacleCollection {
 
     pub fn calculate_mesh_sizes(mut obstacles: ResMut<Self>, meshes: Res<Assets<Mesh>>) {
         obstacles.boulder.calculate_mesh_size(&meshes);
+        obstacles.stump.calculate_mesh_size(&meshes);
 
         obstacles.trees.small.calculate_mesh_size(&meshes);
         obstacles.trees.medium.calculate_mesh_size(&meshes);

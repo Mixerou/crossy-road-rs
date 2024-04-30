@@ -5,7 +5,7 @@ use bevy::prelude::KeyCode;
 
 // Camera
 pub const CAMERA_MOVEMENT_SPEED: Duration = Duration::from_secs(1);
-pub const CAMERA_SPAWN_POINT: Vec3 = Vec3::new(-1.5, 3.0, 0.75);
+pub const CAMERA_SPAWN_POINT: Vec3 = Vec3::new(-1.5, 3., 0.75);
 
 // Map
 pub const MAP_MIN_X: i32 = -8;

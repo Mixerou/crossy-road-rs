@@ -41,7 +41,7 @@ fn spawn_camera(mut commands: Commands) {
         Camera3dBundle {
             projection: Projection::Orthographic(OrthographicProjection {
                 near: -4.,
-                scaling_mode: ScalingMode::FixedVertical(2.0),
+                scaling_mode: ScalingMode::FixedVertical(2.),
                 scale: 2.5,
                 ..Default::default()
             }),

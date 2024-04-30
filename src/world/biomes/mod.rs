@@ -26,7 +26,7 @@ impl StandardBiomeSystems {
             transform: Transform::from_translation(Vec3::new(0., 5.5, -3.))
                 .looking_at(Vec3::ZERO, Vec3::Y),
             cascade_shadow_config: CascadeShadowConfigBuilder {
-                first_cascade_far_bound: 7.0,
+                first_cascade_far_bound: 7.,
                 minimum_distance: 0.,
                 maximum_distance: 0.1,
                 ..Default::default()

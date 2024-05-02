@@ -1,12 +1,17 @@
+use std::f32::consts::PI;
+
 use bevy::hierarchy::DespawnRecursiveExt;
-use bevy::math::Vec3;
-use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle};
+use bevy::math::{Quat, Vec3};
+use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle, PbrBundle};
 use bevy::prelude::{
     Color, Commands, Component, Entity, EventReader, Or, Query, ResMut, Transform, With,
 };
+use bevy_rapier3d::dynamics::RigidBody;
+use bevy_rapier3d::geometry::Collider;
 
 use crate::constants::{MAP_MAX_Z, MAP_MIN_Z};
 use crate::events::RequestOldChunkDespawning;
+use crate::resources::Model;
 use crate::world::Map;
 
 pub mod crossy_valley;
@@ -90,6 +95,48 @@ impl StandardBiomeSystems {
         map.chunks.clear();
         map.obstacles_xz.clear();
     }
+}
+
+fn spawn_ground(commands: &mut Commands, model: &Model, x: i32, z: i32) -> Entity {
+    commands
+        .spawn((
+            PbrBundle {
+                mesh: model.mesh.clone_weak(),
+                material: model.material.clone_weak(),
+                transform: Transform::from_xyz(x as f32, 0., z as f32),
+                ..Default::default()
+            },
+            Ground,
+            RigidBody::Fixed,
+            Collider::cuboid(
+                model.mesh_size.x / 2.,
+                model.mesh_size.y / 2.,
+                model.mesh_size.z / 2.,
+            ),
+        ))
+        .id()
+}
+
+fn spawn_obstacle(
+    commands: &mut Commands,
+    map: &mut ResMut<Map>,
+    model: &Model,
+    x: i32,
+    z: i32,
+    rotation_factor: f32,
+) {
+    let obstacle = commands.spawn((
+        PbrBundle {
+            mesh: model.mesh.clone_weak(),
+            material: model.material.clone_weak(),
+            transform: Transform::from_xyz(x as f32, 0.5 + model.mesh_size.y / 2., z as f32)
+                .with_rotation(Quat::from_rotation_y(rotation_factor * PI)),
+            ..Default::default()
+        },
+        Obstacle,
+    ));
+
+    map.obstacles_xz.insert((x, z), obstacle.id());
 }
 
 #[derive(Component)]

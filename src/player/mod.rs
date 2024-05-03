@@ -4,7 +4,7 @@ use std::f32::consts::{FRAC_PI_2, PI, TAU};
 use bevy::app::{App, Plugin, Update};
 use bevy::hierarchy::{BuildChildren, Children, DespawnRecursiveExt};
 use bevy::input::ButtonInput;
-use bevy::math::{Quat, Vec3};
+use bevy::math::{IVec2, Quat, Vec3};
 use bevy::pbr::PbrBundle;
 use bevy::prelude::{
     in_state, Commands, Component, Entity, KeyCode, NextState, OnEnter, Query, Res, ResMut,
@@ -302,7 +302,10 @@ fn init_player_move(
     let final_position = (player_translation + displacement_xz).round();
     if map
         .obstacles_xz
-        .get(&(final_position.x as i32, final_position.z as i32))
+        .get(&IVec2::new(
+            final_position.x as i32,
+            final_position.z as i32,
+        ))
         .is_some()
     {
         return;

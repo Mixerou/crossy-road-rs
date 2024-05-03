@@ -1,6 +1,7 @@
 use std::collections::VecDeque;
 
 use bevy::app::{App, Plugin, Update};
+use bevy::math::IVec2;
 #[cfg(feature = "debug")]
 use bevy::prelude::EventReader;
 use bevy::prelude::{
@@ -48,7 +49,7 @@ pub struct Chunk {
 pub struct Map {
     pub random_generator: Rand32,
     pub chunks: VecDeque<Chunk>,
-    pub obstacles_xz: HashMap<(i32, i32), Entity>,
+    pub obstacles_xz: HashMap<IVec2, Entity>,
 }
 
 impl Default for Map {

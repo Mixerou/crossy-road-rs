@@ -1,7 +1,7 @@
 use std::f32::consts::PI;
 
 use bevy::hierarchy::DespawnRecursiveExt;
-use bevy::math::{Quat, Vec3};
+use bevy::math::{IVec2, Quat, Vec3};
 use bevy::pbr::{CascadeShadowConfigBuilder, DirectionalLight, DirectionalLightBundle, PbrBundle};
 use bevy::prelude::{
     Color, Commands, Component, Entity, EventReader, Or, Query, ResMut, Transform, With,
@@ -70,7 +70,7 @@ impl StandardBiomeSystems {
             }
 
             for z in MAP_MIN_Z..MAP_MAX_Z {
-                if let Some(entity) = map.obstacles_xz.remove(&(chunk_position_x, z)) {
+                if let Some(entity) = map.obstacles_xz.remove(&IVec2::new(chunk_position_x, z)) {
                     if let Some(entity) = commands.get_entity(entity) {
                         entity.despawn_recursive();
                     }
@@ -136,7 +136,7 @@ fn spawn_obstacle(
         Obstacle,
     ));
 
-    map.obstacles_xz.insert((x, z), obstacle.id());
+    map.obstacles_xz.insert(IVec2::new(x, z), obstacle.id());
 }
 
 #[derive(Component)]
